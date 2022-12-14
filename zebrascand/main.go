@@ -18,6 +18,22 @@ func isASCIIPrintable(s []byte) bool {
 	return true
 }
 
+type UserInput struct {
+	value int
+}
+
+func readInput(input chan<- interface{}) {
+	for {
+			var value int
+			_, err := fmt.Scanf("%d\n", &value)
+			if err != nil {
+					panic(err)
+			}
+			// fmt.Println("read cmd", u)
+			input <- UserInput{value}
+	}
+}
+
 func main() {
 	if os.Getenv("ZSDEBUG") != "" {
 		log.SetLevel(log.DebugLevel)
@@ -32,10 +48,7 @@ func main() {
 	}
 	defer dm.Close()
 
-	server := Server{
-		ListenAddress: "localhost:4141",
-	}
-	go server.Serve()
+	go readInput(eventChan)
 
 	for {
 		switch event := (<-eventChan).(type) {
@@ -65,8 +78,12 @@ func main() {
 				msg["supplemental"] = sup
 			}
 
-			code, _ := json.Marshal(msg)
-			server.Broadcast(code)
+			code, _ := json.Marshal(msg) 
+			fmt.Println(string(code[:]))
+
+		case UserInput:
+			fmt.Println("userinput", event.value)
+			fmt.Println(dm)
 
 		default:
 			log.Debug(fmt.Sprintf("main loop received unknown event %T", event))
